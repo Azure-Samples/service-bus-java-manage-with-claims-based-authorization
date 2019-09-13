@@ -4,9 +4,8 @@ languages:
 - java
 products:
 - azure
-extensions:
-- services: Servicebus
-- platforms: java
+description: "Getting Started with Servicebus - Service Bus With Claim Based Authorization - in Java"
+urlFragment: service-bus-java-manage-with-claims-based-authorization
 ---
 
 # Getting Started with Servicebus - Service Bus With Claim Based Authorization - in Java #
