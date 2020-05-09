@@ -21,9 +21,11 @@ import com.microsoft.azure.management.servicebus.ServiceBusNamespace;
 import com.microsoft.azure.management.servicebus.ServiceBusSubscription;
 import com.microsoft.azure.management.servicebus.Topic;
 import com.microsoft.rest.LogLevel;
+
 import java.io.File;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Azure Service Bus basic scenario sample.
  * - Create namespace with a queue and a topic
@@ -113,7 +115,7 @@ public final class ServiceBusWithClaimBasedAuthorization {
             }
 
 
-            
+
 
             //=============================================================
             // Send a message to topic.
