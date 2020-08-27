@@ -109,7 +109,7 @@ public final class ServiceBusWithClaimBasedAuthorization {
                 .sender()
                 .queueName(queueName)
                 .buildClient();;
-                serviceBusSenderClient.send(message);
+                serviceBusSenderClient.sendMessage(message);
             }
             catch (Exception ex) {
             }
@@ -126,7 +126,7 @@ public final class ServiceBusWithClaimBasedAuthorization {
                 .sender()
                 .topicName(topicName)
                 .buildClient();;
-                serviceBusSenderClient.send(message);
+                serviceBusSenderClient.sendMessage(message);
             }
             catch (Exception ex) {
             }
