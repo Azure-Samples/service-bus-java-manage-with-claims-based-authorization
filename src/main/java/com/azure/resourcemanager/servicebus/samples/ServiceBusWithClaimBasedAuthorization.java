@@ -1,30 +1,26 @@
-/**
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for
- * license information.
- */
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 
-package com.microsoft.azure.management.servicebus.samples;
+package com.azure.resourcemanager.servicebus.samples;
 
-import com.microsoft.azure.management.Azure;
-import com.microsoft.azure.management.resources.fluentcore.arm.Region;
-import com.microsoft.azure.management.resources.fluentcore.utils.SdkContext;
-import com.microsoft.azure.management.samples.Utils;
-import com.microsoft.azure.management.servicebus.AuthorizationKeys;
-import com.microsoft.azure.management.servicebus.NamespaceAuthorizationRule;
-import com.microsoft.azure.management.servicebus.NamespaceSku;
-import com.microsoft.azure.management.servicebus.Queue;
-import com.microsoft.azure.management.servicebus.ServiceBusNamespace;
-import com.microsoft.azure.management.servicebus.ServiceBusSubscription;
-import com.microsoft.azure.management.servicebus.Topic;
-import com.microsoft.rest.LogLevel;
-import com.microsoft.windowsazure.Configuration;
-import com.microsoft.windowsazure.services.servicebus.ServiceBusConfiguration;
-import com.microsoft.windowsazure.services.servicebus.ServiceBusContract;
-import com.microsoft.windowsazure.services.servicebus.ServiceBusService;
-import com.microsoft.windowsazure.services.servicebus.models.BrokeredMessage;
-
-import java.io.File;
+import com.azure.core.credential.TokenCredential;
+import com.azure.core.http.policy.HttpLogDetailLevel;
+import com.azure.core.management.AzureEnvironment;
+import com.azure.core.management.profile.AzureProfile;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.messaging.servicebus.ServiceBusClientBuilder;
+import com.azure.messaging.servicebus.ServiceBusMessage;
+import com.azure.messaging.servicebus.ServiceBusSenderClient;
+import com.azure.resourcemanager.AzureResourceManager;
+import com.azure.core.management.Region;
+import com.azure.resourcemanager.samples.Utils;
+import com.azure.resourcemanager.servicebus.models.AuthorizationKeys;
+import com.azure.resourcemanager.servicebus.models.NamespaceAuthorizationRule;
+import com.azure.resourcemanager.servicebus.models.NamespaceSku;
+import com.azure.resourcemanager.servicebus.models.Queue;
+import com.azure.resourcemanager.servicebus.models.ServiceBusNamespace;
+import com.azure.resourcemanager.servicebus.models.ServiceBusSubscription;
+import com.azure.resourcemanager.servicebus.models.Topic;
 
 /**
  * Azure Service Bus basic scenario sample.
@@ -41,17 +37,17 @@ public final class ServiceBusWithClaimBasedAuthorization {
 
     /**
      * Main function which runs the actual sample.
-     * @param azure instance of the azure client
+     * @param azureResourceManager instance of the azure client
      * @return true if sample runs successfully
      */
-    public static boolean runSample(Azure azure) {
+    public static boolean runSample(AzureResourceManager azureResourceManager) {
         // New resources
-        final String rgName = SdkContext.randomResourceName("rgSB03_", 24);
-        final String namespaceName = SdkContext.randomResourceName("namespace", 20);
-        final String queueName = SdkContext.randomResourceName("queue1_", 24);
-        final String topicName = SdkContext.randomResourceName("topic_", 24);
-        final String subscription1Name = SdkContext.randomResourceName("sub1_", 24);
-        final String subscription2Name = SdkContext.randomResourceName("sub2_", 24);
+        final String rgName = Utils.randomResourceName(azureResourceManager, "rgSB03_", 24);
+        final String namespaceName = Utils.randomResourceName(azureResourceManager, "namespace", 20);
+        final String queueName = Utils.randomResourceName(azureResourceManager, "queue1_", 24);
+        final String topicName = Utils.randomResourceName(azureResourceManager, "topic_", 24);
+        final String subscription1Name = Utils.randomResourceName(azureResourceManager, "sub1_", 24);
+        final String subscription2Name = Utils.randomResourceName(azureResourceManager, "sub2_", 24);
 
         try {
             //============================================================
@@ -59,14 +55,14 @@ public final class ServiceBusWithClaimBasedAuthorization {
 
             System.out.println("Creating name space " + namespaceName + " along with a queue " + queueName + " and a topic " +  topicName + " in resource group " + rgName + "...");
 
-            ServiceBusNamespace serviceBusNamespace = azure.serviceBusNamespaces()
-                    .define(namespaceName)
-                    .withRegion(Region.US_WEST)
-                    .withNewResourceGroup(rgName)
-                    .withSku(NamespaceSku.STANDARD)
-                    .withNewQueue(queueName, 1024)
-                    .withNewTopic(topicName, 1024)
-                    .create();
+            ServiceBusNamespace serviceBusNamespace = azureResourceManager.serviceBusNamespaces()
+                .define(namespaceName)
+                .withRegion(Region.US_WEST)
+                .withNewResourceGroup(rgName)
+                .withSku(NamespaceSku.STANDARD)
+                .withNewQueue(queueName, 1024)
+                .withNewTopic(topicName, 1024)
+                .create();
 
             System.out.println("Created service bus " + serviceBusNamespace.name() + " (with queue and topic)");
             Utils.print(serviceBusNamespace);
@@ -102,47 +98,37 @@ public final class ServiceBusWithClaimBasedAuthorization {
 
             //=============================================================
             // Send a message to queue.
-            try {
-                Configuration config = Configuration.load();
-                config.setProperty(ServiceBusConfiguration.CONNECTION_STRING, keys.primaryConnectionString());
-                ServiceBusContract queueService = ServiceBusService.create(config);
-                queueService.sendMessage(queueName, new BrokeredMessage("Hello"));
-            }
-            catch (Exception ex) {
-            }
+            ServiceBusSenderClient sender = new ServiceBusClientBuilder()
+                .connectionString(keys.primaryConnectionString())
+                .sender()
+                .queueName(queueName)
+                .buildClient();
+            sender.sendMessage(new ServiceBusMessage("Hello").setMessageId("1"));
+            sender.close();
 
 
             //=============================================================
             // Send a message to topic.
-            try {
-                Configuration config2 = Configuration.load();
-                config2.setProperty(ServiceBusConfiguration.CONNECTION_STRING, keys.primaryConnectionString());
-                ServiceBusContract topicService = ServiceBusService.create(config2);
-                topicService.sendMessage(topicName, new BrokeredMessage("Hello"));
-            }
-            catch (Exception ex) {
-            }
-
+            sender = new ServiceBusClientBuilder()
+                .connectionString(keys.primaryConnectionString())
+                .sender()
+                .topicName(topicName)
+                .buildClient();
+            sender.sendMessage(new ServiceBusMessage("Hello").setMessageId("1"));
+            sender.close();
 
             //=============================================================
             // Delete a namespace
             System.out.println("Deleting namespace " + namespaceName + " [topic, queues and subscription will delete along with that]...");
             // This will delete the namespace and queue within it.
-            try {
-                azure.serviceBusNamespaces().deleteById(serviceBusNamespace.id());
-            }
-            catch (Exception ex) {
-            }
+            azureResourceManager.serviceBusNamespaces().deleteById(serviceBusNamespace.id());
             System.out.println("Deleted namespace " + namespaceName + "...");
 
             return true;
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
-            e.printStackTrace();
         } finally {
             try {
                 System.out.println("Deleting Resource Group: " + rgName);
-                azure.resourceGroups().beginDeleteByName(rgName);
+                azureResourceManager.resourceGroups().beginDeleteByName(rgName);
                 System.out.println("Deleted Resource Group: " + rgName);
             } catch (NullPointerException npe) {
                 System.out.println("Did not create any resources in Azure. No clean up is necessary");
@@ -150,31 +136,30 @@ public final class ServiceBusWithClaimBasedAuthorization {
                 g.printStackTrace();
             }
         }
-        return false;
     }
 
     /**
      * Main entry point.
+     *
      * @param args the parameters
      */
     public static void main(String[] args) {
         try {
+            final AzureProfile profile = new AzureProfile(AzureEnvironment.AZURE);
+            final TokenCredential credential = new DefaultAzureCredentialBuilder()
+                .authorityHost(profile.getEnvironment().getActiveDirectoryEndpoint())
+                .build();
 
-            //=============================================================
-            // Authenticate
-
-            final File credFile = new File(System.getenv("AZURE_AUTH_LOCATION"));
-
-            Azure azure = Azure
-                    .configure()
-                    .withLogLevel(LogLevel.BODY_AND_HEADERS)
-                    .authenticate(credFile)
-                    .withDefaultSubscription();
+            AzureResourceManager azureResourceManager = AzureResourceManager
+                .configure()
+                .withLogLevel(HttpLogDetailLevel.BASIC)
+                .authenticate(credential, profile)
+                .withDefaultSubscription();
 
             // Print selected subscription
-            System.out.println("Selected subscription: " + azure.subscriptionId());
-            runSample(azure);
+            System.out.println("Selected subscription: " + azureResourceManager.subscriptionId());
 
+            runSample(azureResourceManager);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
